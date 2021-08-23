@@ -10,6 +10,8 @@ import TodoList from "./components/Todos.js";
 import ProjectTodoList from "./components/Project.js";
 import LoginForm from "./components/Auth.js";
 import Cookies from "universal-cookie";
+import ProjectForm from "./components/ProjectForm";
+import TodoForm from "./components/TodoForm";
 
 
 const NotFound404 = ({location}) => {
@@ -118,6 +120,57 @@ class App extends React.Component {
         this.get_token_from_storage()
     }
 
+    deleteProject(id) {
+        const headers = this.get_headers()
+        axios.delete(`http://127.0.0.1:8000/api/projects/${id}`, {headers})
+            .then(response => {
+                this.setState({projects: this.state.projects.filter((item) => item.id !== id)})
+            }).catch(error => console.log(error))
+    }
+
+    createProject(name, repoLink, user) {
+        const headers = this.get_headers()
+        const data = {
+            name: name,
+            repoLink: repoLink,
+            users: [user, ],
+        }
+        console.log('posting')
+        console.log(data)
+        axios.post('http://127.0.0.1:8000/api/projects/', data, {headers})
+            .then(response => {
+                let newProject = response.data
+                const user = this.state.users[0].filter((item) => item.id === newProject.users[0])[0]
+                newProject.users[0] = user
+                this.setState({projects: [...this.state.projects, newProject]})
+            }).catch(error => console.log(error))
+    }
+
+    deleteTodo(id) {
+        const headers = this.get_headers()
+        axios.delete(`http://127.0.0.1:8000/api/todo_lists/${id}`, {headers})
+            .then(response => {
+                this.setState({todos: this.state.todos.filter((item) => item.id !== id)})
+            }).catch(error => console.log(error))
+    }
+
+        createTodo(text, project) {
+        const headers = this.get_headers()
+        const data = {
+            text: text,
+            project: project,
+        }
+        console.log('posting')
+        console.log(data)
+        axios.post('http://127.0.0.1:8000/api/todo_lists/', data, {headers})
+            .then(response => {
+                let newTodo = response.data
+                const project = this.state.projects.filter((item) => item.id === newTodo.project)[0]
+                newTodo.project = project
+                this.setState({todos: [...this.state.todos, newTodo]})
+            }).catch(error => console.log(error))
+    }
+
     render() {
         return (
             <div className="App">
@@ -125,8 +178,10 @@ class App extends React.Component {
                     <Menu is_authenticated={this.is_authenticated} logout={this.logout}/>
                     <Switch>
                         <Route exact path='/users' component={() => <UserList users={this.state.users}/>}/>
-                        <Route exact path='/projects' component={() => <ProjectList projects={this.state.projects}/>}/>
-                        <Route exact path='/todo' component={() => <TodoList todos={this.state.todos}/>}/>
+                        <Route exact path='/projects/create' component={() => <ProjectForm users={this.state.users} createProject={(name, repoLink, user) => this.createProject(name, repoLink, user)}/>}/>
+                        <Route exact path='/projects' component={() => <ProjectList projects={this.state.projects} deleteProject={(id) => this.deleteProject(id)}/>}/>
+                        <Route exact path='/todo' component={() => <TodoList todos={this.state.todos} deleteTodo={(id) => this.deleteTodo(id)}/>}/>
+                        <Route exact path='/todos/create' component={() => <TodoForm projects={this.state.projects} createProject={(text, project) => this.createTodo(text, project)}/>}/>
                         <Route exact path='/login' component={() => <LoginForm get_token={(username, password) => this.get_token(username, password)} />} />
                         <Route path="/projects/:id"><ProjectTodoList items={this.state.todos} /></Route>
                         <Redirect from='/' to='/projects' />
